@@ -1,86 +1,54 @@
-name: Install OpenSSL with vcpkg (Windows, bash, debug-friendly)
+name: Vcpkg OpenSSL Windows
 
-on:
-  push:
-  workflow_dispatch:
+on: [push, pull_request]
 
 jobs:
-  install-openssl:
+  build:
+    # Use a Windows runner environment
     runs-on: windows-latest
+
+    # The shell is explicitly set to bash for all run steps
+    defaults:
+      run:
+        shell: bash
+
     steps:
-      - name: Checkout repository
+      - name: ⬇️ Checkout Repository
+        # Action to check out your repository content
         uses: actions/checkout@v4
 
-      - name: Show runner info (debug)
-        shell: bash
+      - name: 🛠️ Install Vcpkg
+        # Use a pre-built action to set up vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          # Set the vcpkg_root location for better control/cache
+          vcpkgDirectory: ${{ runner.workspace }}/vcpkg_root
+          # Use a vcpkg commit ID or 'latest'
+          vcpkgCommitId: 'latest' 
+          # Use vcpkg manifest (vcpkg.json) if you have one, or set to false
+          vcpkgJsonPath: ''
+
+      - name: 📦 Install OpenSSL via Vcpkg (x64-windows)
+        # Use the 'run' command, which is executed via bash (as defined in defaults)
         run: |
-          set -euo pipefail
-          echo "User: $(whoami || true)"
-          echo "PWD: $(pwd)"
-          echo "Windows shell info:"
-          cmd.exe /c ver
-          echo "Environment PATH (truncated):"
-          echo "$PATH" | tr ';' '\n' | sed -n '1,100p' || true
-
-      - name: Install vcpkg (clone + bootstrap via cmd.exe) — bash
-        shell: bash
+          echo "Installing openssl:x64-windows..."
+          # The vcpkg executable is available on the PATH from the previous step
+          vcpkg install openssl:x64-windows
+          echo "Installation complete!"
+          
+      - name: 🔬 Verify OpenSSL Installation
         run: |
-          set -euo pipefail
-
-          git clone --depth 1 https://github.com/microsoft/vcpkg.git vcpkg
-          cd vcpkg
-
-          echo "--- BEFORE bootstrap: listing vcpkg dir ---"
-          ls -la
-
-          echo "--- Check for Visual C++ toolchain (cl.exe) ---"
-          # run via cmd.exe to check Windows PATH for cl.exe
-          cmd.exe /c "where cl.exe" || echo "cl.exe not found on PATH (this may be OK on some runners)"
-
-          echo "--- Running bootstrap-vcpkg.bat (capturing output to bootstrap.log) ---"
-          # run bootstrap and capture output to a windows-style file
-          # note: we run bootstrap twice only if first run fails to give a full log
-          cmd.exe /c "bootstrap-vcpkg.bat > bootstrap.log 2>&1" || true
-
-          echo "--- bootstrap.log (first 200 lines) ---"
-          # show bootstrap output (convert CRLF for readability)
-          tr -d '\r' < bootstrap.log | sed -n '1,200p' || true
-
-          echo "--- AFTER bootstrap: listing vcpkg dir ---"
-          ls -la
-
-          if [ ! -f ./vcpkg.exe ]; then
-            echo "ERROR: vcpkg.exe not found after bootstrap."
-            echo "Re-running bootstrap to capture any additional output..."
-            cmd.exe /c "bootstrap-vcpkg.bat > bootstrap-rerun.log 2>&1" || true
-            echo "--- bootstrap-rerun.log ---"
-            tr -d '\r' < bootstrap-rerun.log | sed -n '1,400p' || true
-            echo "Failing due to missing vcpkg.exe."
-            exit 127
-          fi
-
-          echo "vcpkg.exe found. Setting VCPKG_ROOT and adding to PATH."
-          echo "VCPKG_ROOT=$(pwd)" >> "$GITHUB_ENV"
-          echo "$(pwd)" >> "$GITHUB_PATH"
-
-      - name: Install OpenSSL (x64-windows) with vcpkg — bash
-        shell: bash
+          echo "Listing installed packages for verification:"
+          # List the installed packages to confirm openssl is present
+          vcpkg list
+          
+      - name: ⚙️ Show OpenSSL Path and Version (Optional)
         run: |
-          set -euo pipefail
-          cd vcpkg
-
-          echo "--- vcpkg version ---"
-          ./vcpkg.exe version || true
-
-          echo "--- Installing openssl:x64-windows ---"
-          ./vcpkg.exe install openssl:x64-windows
-
-          echo "--- Installed packages (grep openssl) ---"
-          ./vcpkg.exe list | grep openssl || true
-
-      - name: Optional integrate vcpkg (for MSBuild/CMake)
-        shell: bash
-        run: |
-          set -euo pipefail
-          cd vcpkg
-          ./vcpkg.e
+          # Vcpkg installs packages into the 'installed' directory within its root
+          OPENSSL_INSTALL_PATH="${{ runner.workspace }}/vcpkg_root/installed/x64-windows"
+          echo "OpenSSL Install Path: $OPENSSL_INSTALL_PATH"
+          
+          # Navigate to the tools directory and run openssl.exe to check version
+          cd "$OPENSSL_INSTALL_PATH/tools/openssl"
+          ./openssl.exe version
+          echo "Verification complete!"
