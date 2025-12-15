@@ -23,8 +23,6 @@ jobs:
         with:
           # Set the vcpkg_root location for better control/cache
           vcpkgDirectory: ${{ runner.workspace }}/vcpkg_root
-          # Use a vcpkg commit ID or 'latest'
-          vcpkgCommitId: 'latest' 
           # Use vcpkg manifest (vcpkg.json) if you have one, or set to false
           vcpkgJsonPath: ''
 
