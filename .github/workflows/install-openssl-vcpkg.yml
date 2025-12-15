@@ -4,51 +4,29 @@ on: [push, pull_request]
 
 jobs:
   build:
-    # Use a Windows runner environment
     runs-on: windows-latest
-
-    # The shell is explicitly set to bash for all run steps
     defaults:
       run:
         shell: bash
 
     steps:
       - name: ⬇️ Checkout Repository
-        # Action to check out your repository content
         uses: actions/checkout@v4
 
       - name: 🛠️ Install Vcpkg
-        # Use a pre-built action to set up vcpkg
         uses: lukka/run-vcpkg@v11
         with:
-          # Set the vcpkg_root location for better control/cache
           vcpkgDirectory: ${{ runner.workspace }}/vcpkg_root
-          # Use a vcpkg commit ID or 'latest'
-          vcpkgCommitId: '594ad8871e1e8e45f8e626c015fd611163430207'
-          # Use vcpkg manifest (vcpkg.json) if you have one, or set to false
-          vcpkgJsonPath: ''
+          # Fixed input name:
+          vcpkgGitCommitId: '594ad8871e1e8e45f8e626c015fd611163430207'
 
       - name: 📦 Install OpenSSL via Vcpkg (x64-windows)
-        # Use the 'run' command, which is executed via bash (as defined in defaults)
         run: |
           echo "Installing openssl:x64-windows..."
-          # The vcpkg executable is available on the PATH from the previous step
+          # Note: vcpkg is automatically added to PATH by the previous step
           vcpkg install openssl:x64-windows
           echo "Installation complete!"
-          
+
       - name: 🔬 Verify OpenSSL Installation
-        run: |
-          echo "Listing installed packages for verification:"
-          # List the installed packages to confirm openssl is present
-          vcpkg list
-          
-      - name: ⚙️ Show OpenSSL Path and Version (Optional)
-        run: |
-          # Vcpkg installs packages into the 'installed' directory within its root
-          OPENSSL_INSTALL_PATH="${{ runner.workspace }}/vcpkg_root/installed/x64-windows"
-          echo "OpenSSL Install Path: $OPENSSL_INSTALL_PATH"
-          
-          # Navigate to the tools directory and run openssl.exe to check version
-          cd "$OPENSSL_INSTALL_PATH/tools/openssl"
-          ./openssl.exe version
-          echo "Verification complete!"
+        run: vcpkg list
+        
