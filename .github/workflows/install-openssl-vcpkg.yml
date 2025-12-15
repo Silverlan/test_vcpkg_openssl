@@ -78,7 +78,7 @@ jobs:
           echo "--- Installed packages (grep openssl) ---"
           ./vcpkg.exe list | grep openssl || true
 
-      - name: Optional: integrate vcpkg (for MSBuild/CMake)
+      - name: Optional integrate vcpkg (for MSBuild/CMake)
         shell: bash
         run: |
           set -euo pipefail
