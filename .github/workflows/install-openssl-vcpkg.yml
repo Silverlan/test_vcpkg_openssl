@@ -1,0 +1,49 @@
+name: Install OpenSSL with vcpkg (Windows, bash)
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  install-openssl:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install vcpkg (using bash)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # clone vcpkg
+          git clone https://github.com/microsoft/vcpkg.git vcpkg
+          cd vcpkg
+
+          # On Windows the bootstrap script is a .bat. We call it via cmd.exe from bash
+          # (this avoids using PowerShell while still producing vcpkg.exe).
+          cmd.exe /c bootstrap-vcpkg.bat
+
+          # Expose VCPKG_ROOT and add vcpkg directory to PATH so later steps can run ./vcpkg.exe easily
+          echo "VCPKG_ROOT=$(pwd)" >> "$GITHUB_ENV"
+          echo "$(pwd)" >> "$GITHUB_PATH"
+
+      - name: Install OpenSSL (x64-windows) with vcpkg
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd vcpkg
+
+          # choose the triplet you need (example: x64-windows)
+          ./vcpkg.exe install openssl:x64-windows
+
+          # optional: integrate vcpkg with MSBuild / CMake user-wide
+          ./vcpkg.exe integrate install
+
+      - name: Verify OpenSSL package installed
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd vcpkg
+          echo "Installed vcpkg packages:"
+          ./vcpkg.exe list | grep openssl || true
